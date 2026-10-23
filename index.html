@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AJAYNXT Radar Training Lab</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header & Mode Switcher -->
+  <header class="app-header">
+    <div class="logo-area">
+      <div class="radar-ping-icon"></div>
+      <div>
+        <h1>AJAYNXT Radar Training Lab</h1>
+        <p class="subtitle">Tactical Map Awareness • Drag Aim & Damage Simulator</p>
+      </div>
+    </div>
+
+    <!-- Navigation Mode Switcher -->
+    <div class="mode-navigation">
+      <button class="nav-btn active" id="tabRadar" data-tab="radar-section">
+        🛰️ Tactical Radar & FPV
+      </button>
+      <button class="nav-btn" id="tabAim" data-tab="aim-section">
+        🎯 Drag Aim & Range Lab
+      </button>
+    </div>
+
+    <div class="safety-badge" id="safetyBadge">
+      <span class="shield-icon">🛡️</span>
+      <span>100% OFFLINE SIMULATION • INDEPENDENT EDUCATIONAL TOOL</span>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- ===================================================================
+         SECTION 1: TACTICAL RADAR, FULL-MAP & FPV GAMEPLAY SIMULATOR
+         =================================================================== -->
+    <div id="radarSection" class="content-tab-page active">
+      <!-- Top Toolbar -->
+      <section class="toolbar-panel">
+        <div class="control-group">
+          <button id="btnPlayPause" class="btn btn-primary" title="Start or Pause the Simulation">
+            <span id="playPauseIcon">▶</span> <span id="playPauseText">Start Sim</span>
+          </button>
+          <button id="btnReset" class="btn btn-secondary" title="Reset positions and timer">
+            ↺ Reset
+          </button>
+          <span class="timer-display" id="simTimer">00:00</span>
+        </div>
+
+        <!-- View Switcher -->
+        <div class="view-toggles">
+          <span class="control-label">View:</span>
+          <button class="btn btn-toggle active" data-view="dual" id="viewDual">Dual Split</button>
+          <button class="btn btn-toggle" data-view="radar" id="viewRadar">Radar / Map</button>
+          <button class="btn btn-toggle" data-view="fpv" id="viewFpv">Gameplay View</button>
+        </div>
+
+        <!-- Radar Display Type Toggle: Minimap vs Full Map -->
+        <div class="map-mode-toggles">
+          <span class="control-label">Map Mode:</span>
+          <button class="btn btn-sm btn-map active" id="mapModeMinimap" data-mapmode="minimap">Minimap (Centred)</button>
+          <button class="btn btn-sm btn-map" id="mapModeFullmap" data-mapmode="fullmap">Full Map (500m Grid)</button>
+        </div>
+
+        <div class="control-group toggles-group">
+          <label class="switch-container" title="Highlight target outlines for reaction training">
+            <input type="checkbox" id="chkOutlineVis" checked>
+            <span class="switch-slider"></span>
+            <span class="switch-label">Outline Vis (ESP Sim)</span>
+          </label>
+          <label class="switch-container" title="Simulated enemy patrol movements">
+            <input type="checkbox" id="chkEnemyPatrol" checked>
+            <span class="switch-slider"></span>
+            <span class="switch-label">Enemy Patrol</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Center Display: Dual Grid -->
+      <section class="viewport-grid" id="viewportGrid">
+        <!-- PANEL 1: Radar / Map Canvas -->
+        <div class="view-card" id="radarCard">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="card-dot radar-dot"></span>
+              <span id="radarCardTitle">TACTICAL MINIMAP RADAR</span>
+            </div>
+            <div class="radar-controls">
+              <span class="zoom-label">Zoom:</span>
+              <input type="range" id="radarZoom" min="0.6" max="1.8" step="0.1" value="1.0" class="mini-slider">
+              <span id="zoomValue" class="indicator-text">1.0x</span>
+            </div>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="radarCanvas" width="500" height="500"></canvas>
+            <div class="radar-overlay-info">
+              <div id="playerCoords">POS: X: 250m | Y: 250m</div>
+              <div id="playerHeading">HEADING: 000° (N)</div>
+              <div id="activeMapModeLabel">MODE: Minimap (Follow Player)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 2: Simulated Gameplay View (FPV) -->
+        <div class="view-card" id="fpvCard">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="card-dot fpv-dot"></span>
+              <span>SIMULATED GAMEPLAY VIEW (UPPER-CHEST RETICLE)</span>
+            </div>
+            <div class="fpv-status-badge" id="activeAvatarBadge">AVATAR: Vanguard</div>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="fpvCanvas" width="500" height="500"></canvas>
+            <!-- Upper chest crosshair overlay -->
+            <div class="crosshair-guide" id="crosshairGuide">
+              <div class="ch-circle"></div>
+              <div class="ch-dot"></div>
+              <div class="ch-line ch-top"></div>
+              <div class="ch-line ch-bottom"></div>
+              <div class="ch-line ch-left"></div>
+              <div class="ch-line ch-right"></div>
+              <div class="chest-box-hint">UPPER CHEST DRAG ZONE</div>
+            </div>
+            <!-- Compass tape on top of gameplay view -->
+            <div class="compass-bar" id="compassBar">
+              <span id="compassHeading">000° N</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Virtual Touch Controls for Mobile (Moto Edge 50 Pro) & Keyboard Guide -->
+      <section class="touch-control-section" id="touchControls">
+        <div class="dpad-box">
+          <div class="dpad-title">MOVE PLAYER (TOUCH / WASD KEYS)</div>
+          <div class="dpad-grid">
+            <div></div>
+            <button class="dpad-btn" id="dpadUp" data-dir="up">▲</button>
+            <div></div>
+            <button class="dpad-btn" id="dpadLeft" data-dir="left">◀</button>
+            <button class="dpad-btn center-dot" id="dpadStop">•</button>
+            <button class="dpad-btn" id="dpadRight" data-dir="right">▶</button>
+            <div></div>
+            <button class="dpad-btn" id="dpadDown" data-dir="down">▼</button>
+            <div></div>
+          </div>
+        </div>
+
+        <div class="turn-box">
+          <div class="dpad-title">ROTATE VIEW / FREE-LOOK AIM</div>
+          <div class="turn-btn-group">
+            <button class="turn-btn" id="btnRotateLeft" data-rot="left">↺ TURN LEFT</button>
+            <button class="turn-btn" id="btnRotateRight" data-rot="right">TURN RIGHT ↻</button>
+          </div>
+          <div class="touch-hint">💡 Touch & Drag anywhere on the Gameplay View to aim in 360°!</div>
+        </div>
+      </section>
+
+      <!-- Bottom Configuration Panels: 5 Avatars & Targets -->
+      <div class="config-grid">
+        <!-- 5 Avatars Selection Panel (Part 7) -->
+        <section class="panel-box avatar-panel">
+          <div class="panel-header">
+            <h2>5 AVATARS SELECTOR (PART 7)</h2>
+            <button id="btnResetAvatar" class="btn btn-xs btn-outline">↺ Reset to Default</button>
+          </div>
+          <p class="panel-desc">Select an avatar. Instantly updates marker color, HUD badge and weapon styling across all views:</p>
+          <div class="avatar-card-list" id="avatarList"></div>
+        </section>
+
+        <!-- Simulated Enemy Positions & Telemetry Data (Part 3) -->
+        <section class="panel-box enemy-panel">
+          <div class="panel-header">
+            <h2>SIMULATED TARGETS & TELEMETRY</h2>
+            <button id="btnRandomizeEnemies" class="btn btn-xs btn-outline">🎲 Randomize Positions</button>
+          </div>
+          <p class="panel-desc">Real-time distance, bearing and positions of simulated training targets:</p>
+          <div class="enemy-telemetry-list" id="enemyTelemetryList"></div>
+          <div class="enemy-sliders-accordion">
+            <details>
+              <summary>Manual Position Adjusters (X / Y Coordinates)</summary>
+              <div id="enemySlidersContainer" class="sliders-grid"></div>
+            </details>
+          </div>
+        </section>
+      </div>
+    </div>
+
+
+    <!-- ===================================================================
+         SECTION 2: SIMULATED AIM AND DAMAGE TRAINING MODE (PART 5)
+         =================================================================== -->
+    <div id="aimSection" class="content-tab-page">
+      <div class="aim-lab-container">
+        <!-- Range Lab Header -->
+        <div class="aim-lab-header">
+          <div>
+            <h2>🎯 Upper-Torso Aim & Ballistics Range Lab</h2>
+            <p class="panel-desc">Practise drag timing, chest-to-head tracking, simulated recoil and damage falloff with fictional weapons.</p>
+          </div>
+          <div class="disclaimer-chip">
+            ⚠️ 100% Fictional Simulator Settings • Not Actual Game Stats
+          </div>
+        </div>
+
+        <div class="aim-lab-grid">
+          <!-- Left Column: The Interactive Shooting Target Canvas -->
+          <div class="view-card aim-target-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="card-dot fpv-dot"></span>
+                <span>INTERACTIVE TARGET DUMMY (DRAG UPWARD TO FIRE)</span>
+              </div>
+              <div class="range-selector-group">
+                <span class="control-label">Range:</span>
+                <button class="btn btn-xs btn-range" data-range="15">Short (15m)</button>
+                <button class="btn btn-xs btn-range active" data-range="35">Medium (35m)</button>
+                <button class="btn btn-xs btn-range" data-range="65">Long (65m)</button>
+              </div>
+            </div>
+
+            <div class="canvas-wrapper aim-canvas-wrapper">
+              <canvas id="aimCanvas" width="500" height="500"></canvas>
+              
+              <!-- Drag-shot Instruction Overlay -->
+              <div class="aim-instruction-overlay" id="aimInstructionOverlay">
+                <span>Touch/Click target and <strong>DRAG UPWARD ⬆️</strong> to simulate drag-headshot</span>
+              </div>
+
+              <!-- Recoil & Spread Indicator HUD -->
+              <div class="aim-hud-meters">
+                <div class="hud-meter-row">
+                  <span>RECOIL HEAT:</span>
+                  <div class="meter-bar-track">
+                    <div class="meter-bar-fill" id="recoilBarFill" style="width: 0%;"></div>
+                  </div>
+                </div>
+                <div class="hud-meter-row">
+                  <span>SPREAD BLOOM:</span>
+                  <div class="meter-bar-track">
+                    <div class="meter-bar-fill spread-fill" id="spreadBarFill" style="width: 10%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Drag Practice Mobile Friendly Button -->
+            <div class="aim-action-bar">
+              <button id="btnSimFire" class="btn btn-fire">
+                🔥 TAP / HOLD & DRAG UP TO FIRE
+              </button>
+              <button id="btnClearTargets" class="btn btn-secondary btn-sm">
+                🧹 Clear Decals
+              </button>
+              <button id="btnResetStats" class="btn btn-secondary btn-sm">
+                ↺ Reset Stats
+              </button>
+            </div>
+          </div>
+
+          <!-- Right Column: Weapon Profiles, Sliders & Shot Telemetry Log -->
+          <div class="aim-controls-card">
+            <!-- Weapon Profile Selection -->
+            <div class="panel-box">
+              <div class="panel-header">
+                <h2>FICTIONAL WEAPON PROFILES</h2>
+              </div>
+              <div class="weapon-profile-list" id="weaponProfileList">
+                <button class="weapon-profile-btn active" data-profile="ar">
+                  <div class="wp-title">Profile Alpha: Aero AR-4</div>
+                  <div class="wp-sub">Balanced assault rifle • Medium drag stability</div>
+                </button>
+                <button class="weapon-profile-btn" data-profile="dmr">
+                  <div class="wp-title">Profile Beta: Titan Marksman</div>
+                  <div class="wp-sub">Heavy single-shot • High damage • Requires precise drag</div>
+                </button>
+                <button class="weapon-profile-btn" data-profile="smg">
+                  <div class="wp-title">Profile Gamma: Viper Rapid-SMG</div>
+                  <div class="wp-sub">High fire-rate • Fast recoil • Steep long-range falloff</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Real-Time Firing Telemetry & Hit Statistics -->
+            <div class="panel-box">
+              <div class="panel-header">
+                <h2>SESSION SHOT TELEMETRY</h2>
+              </div>
+              <div class="stats-scoreboard">
+                <div class="stat-card">
+                  <div class="stat-num" id="statTotalShots">0</div>
+                  <div class="stat-lbl">SHOTS FIRED</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-num stat-highlight" id="statHeadshots">0</div>
+                  <div class="stat-lbl">HEADSHOTS</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-num" id="statChestHits">0</div>
+                  <div class="stat-lbl">CHEST HITS</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-num" id="statHeadshotRate">0%</div>
+                  <div class="stat-lbl">HS ACCURACY</div>
+                </div>
+              </div>
+
+              <!-- Last Hit Log Banner -->
+              <div class="last-hit-banner" id="lastHitBanner">
+                <div class="hit-label" id="lastHitLabel">READY TO FIRE</div>
+                <div class="hit-detail" id="lastHitDetail">Place crosshair at chest and drag upward</div>
+              </div>
+            </div>
+
+            <!-- Configurable Ballistics Sliders for Controlled Experiments -->
+            <div class="panel-box">
+              <div class="panel-header">
+                <h2>BALLISTICS & RECOIL CALIBRATOR</h2>
+              </div>
+              <div class="calibrator-grid">
+                <div class="cal-item">
+                  <label>Base Chest Damage: <span id="lblBaseDamage">34</span> HP</label>
+                  <input type="range" id="sliderBaseDamage" min="15" max="90" value="34">
+                </div>
+                <div class="cal-item">
+                  <label>Headshot Multiplier: <span id="lblHsMult">2.5</span>x</label>
+                  <input type="range" id="sliderHsMult" min="1.5" max="4.0" step="0.1" value="2.5">
+                </div>
+                <div class="cal-item">
+                  <label>Vertical Recoil Kick: <span id="lblRecoil">Medium (12)</span></label>
+                  <input type="range" id="sliderRecoil" min="4" max="25" value="12">
+                </div>
+                <div class="cal-item">
+                  <label>Bullet Spread Bloom: <span id="lblSpread">Low (8)</span></label>
+                  <input type="range" id="sliderSpread" min="2" max="20" value="8">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Educational Footer: Upper Chest Aiming Notes & Privacy Reference -->
+    <footer class="app-footer">
+      <div class="footer-col">
+        <h3>🎯 Upper-Body Aiming Technique (Part 6)</h3>
+        <p>1. Start crosshair at the <strong>upper-chest</strong> (not at feet or sky).<br>
+        2. Make a <strong>short, controlled upward drag</strong> timed with your first shot.<br>
+        3. If bullets overshoot the head, lower your <strong>General Sensitivity</strong> by 2-3 points.</p>
+      </div>
+      <div class="footer-col">
+        <h3>🔒 Privacy & Account Protection (Part 4)</h3>
+        <p>• Never install modified APKs or third-party injectors (they cause instant ID bans).<br>
+        • Keep Google Play Protect enabled and check app permissions regularly.<br>
+        • This lab runs 100% client-side in your browser without any network tracking.</p>
+      </div>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
